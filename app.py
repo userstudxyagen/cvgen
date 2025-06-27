@@ -1,6 +1,6 @@
 import streamlit as st
 from jinja2 import Environment, FileSystemLoader
-from weasyprint import HTML
+import pdfkit import HTML
 from PIL import Image
 import base64
 from io import BytesIO
@@ -99,7 +99,8 @@ if st.button("📥 Lebenslauf als PDF generieren"):
 
     # Generiere PDF
     pdf_file_path = "lebenslauf_output.pdf"
-    HTML(string=html_content).write_pdf(pdf_file_path)
+    pdfkit.from_string(html_content, "lebenslauf_output.pdf")
+
 
     # Download anzeigen
     with open(pdf_file_path, "rb") as f:
