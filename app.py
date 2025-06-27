@@ -1,10 +1,8 @@
 import streamlit as st
 from jinja2 import Environment, FileSystemLoader
-import pdfkit import HTML
 from PIL import Image
-import base64
 from io import BytesIO
-import os
+import base64
 
 # === Hilfsfunktion: Bild zu base64 konvertieren ===
 def convert_image_to_base64(uploaded_file):
@@ -13,95 +11,79 @@ def convert_image_to_base64(uploaded_file):
     image = Image.open(uploaded_file)
     buffer = BytesIO()
     image.save(buffer, format="PNG")
-    encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    return encoded_image
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
-# === Initialisiere SessionState für dynamische Listen ===
+# === Initialisiere dynamische Felder ===
 for key in ["ausbildung", "erfahrung"]:
     if key not in st.session_state:
         st.session_state[key] = []
 
 st.set_page_config(page_title="Lebenslauf Generator", layout="centered")
-st.title("📄 Lebenslauf Generator")
+st.title("📄 Lebenslauf Generator (Cloud-Version)")
 
-# === Persönliche Daten ===
+# === Persönliche Informationen ===
 st.header("👤 Persönliche Informationen")
-with st.form("persoenliche_daten"):
+with st.form("form_info"):
     vorname = st.text_input("Vorname")
     nachname = st.text_input("Nachname")
-    geburt = st.text_input("Geburtsdatum und -ort", placeholder="z.B. 15.03.1995 in Köln")
+    geburt = st.text_input("Geburtsdatum und -ort")
     adresse = st.text_input("Adresse")
-    telefon = st.text_input("Telefonnummer")
+    telefon = st.text_input("Telefon")
     email = st.text_input("E-Mail")
-    ort_datum = st.text_input("Ort & aktuelles Datum", placeholder="z.B. Berlin, den 27.06.2025")
-    bild = st.file_uploader("📷 Foto hochladen", type=["jpg", "jpeg", "png"])
-    sprachen = st.text_input("Sprachen", placeholder="Deutsch, Englisch, ...")
-    it_kenntnisse = st.text_input("IT-Kenntnisse", placeholder="MS Office, Python, ...")
-    interessen = st.text_input("Interessen / Hobbys", placeholder="Reisen, Musik, ...")
+    ort_datum = st.text_input("Ort & aktuelles Datum")
+    bild = st.file_uploader("Foto (PNG/JPG)", type=["png", "jpg", "jpeg"])
+    sprachen = st.text_input("Sprachen")
+    it = st.text_input("IT-Kenntnisse")
+    interessen = st.text_input("Interessen / Hobbys")
     submitted = st.form_submit_button("✅ Speichern")
 
-# === Ausbildung hinzufügen ===
+# === Ausbildung ===
 st.header("🎓 Ausbildung")
 with st.form("ausbildung_form"):
-    a_zeitraum = st.text_input("Zeitraum", key="zeitraum_a")
-    a_institution = st.text_input("Institution", key="institution_a")
-    a_beschreibung = st.text_area("Beschreibung", key="beschreibung_a")
-    if st.form_submit_button("➕ Ausbildung hinzufügen"):
-        st.session_state.ausbildung.append({
-            "zeitraum": a_zeitraum,
-            "institution": a_institution,
-            "beschreibung": a_beschreibung
-        })
+    z = st.text_input("Zeitraum", key="az")
+    ort = st.text_input("Institution", key="ai")
+    besch = st.text_area("Beschreibung", key="ab")
+    if st.form_submit_button("➕ Hinzufügen"):
+        st.session_state.ausbildung.append({"zeitraum": z, "institution": ort, "beschreibung": besch})
 
-# === Berufserfahrung hinzufügen ===
+# === Berufserfahrung ===
 st.header("💼 Berufserfahrung")
 with st.form("erfahrung_form"):
-    e_zeitraum = st.text_input("Zeitraum", key="zeitraum_e")
-    e_firma = st.text_input("Firma", key="firma_e")
-    e_position = st.text_input("Position", key="position_e")
-    e_aufgaben = st.text_area("Aufgaben / Tätigkeiten", key="aufgaben_e")
-    if st.form_submit_button("➕ Erfahrung hinzufügen"):
-        st.session_state.erfahrung.append({
-            "zeitraum": e_zeitraum,
-            "firma": e_firma,
-            "position": e_position,
-            "aufgaben": e_aufgaben
-        })
+    z = st.text_input("Zeitraum", key="ez")
+    firma = st.text_input("Firma", key="ef")
+    position = st.text_input("Position", key="ep")
+    aufg = st.text_area("Aufgaben", key="ea")
+    if st.form_submit_button("➕ Hinzufügen"):
+        st.session_state.erfahrung.append({"zeitraum": z, "firma": firma, "position": position, "aufgaben": aufg})
 
-# === PDF Generierung ===
-st.header("📄 PDF-Erstellung")
-if st.button("📥 Lebenslauf als PDF generieren"):
-    full_name = f"{vorname} {nachname}"
-    image_base64 = convert_image_to_base64(bild)
-
-    daten = {
-        "name": full_name,
-        "birth_date": geburt,
-        "address": adresse,
-        "phone": telefon,
-        "email": email,
-        "date_location": ort_datum,
-        "signature_name": full_name,
-        "ausbildung": st.session_state.ausbildung,
-        "erfahrung": st.session_state.erfahrung,
-        "skills": {
-            "sprachen": sprachen,
-            "it": it_kenntnisse,
-            "interessen": interessen
-        },
-        "image_base64": image_base64
-    }
-
-    # Lade HTML Template & rendere es
+# === HTML-Vorschau & Download ===
+st.header("📄 Vorschau & Download")
+if st.button("📤 HTML generieren & anzeigen"):
     env = Environment(loader=FileSystemLoader("templates"))
     template = env.get_template("cv_template.html")
-    html_content = template.render(**daten)
 
-    # Generiere PDF
-    pdf_file_path = "lebenslauf_output.pdf"
-    pdfkit.from_string(html_content, "lebenslauf_output.pdf")
+    html = template.render(
+        name=f"{vorname} {nachname}",
+        birth_date=geburt,
+        address=adresse,
+        phone=telefon,
+        email=email,
+        date_location=ort_datum,
+        signature_name=f"{vorname} {nachname}",
+        ausbildung=st.session_state.ausbildung,
+        erfahrung=st.session_state.erfahrung,
+        skills={
+            "sprachen": sprachen,
+            "it": it,
+            "interessen": interessen
+        },
+        image_base64=convert_image_to_base64(bild)
+    )
 
+    # Vorschau anzeigen
+    st.markdown("### 📄 Lebenslauf-Vorschau")
+    st.components.v1.html(html, height=1000, scrolling=True)
 
-    # Download anzeigen
-    with open(pdf_file_path, "rb") as f:
-        st.download_button("⬇️ Lebenslauf herunterladen", f, file_name="lebenslauf.pdf", mime="application/pdf")
+    # Download als HTML
+    html_bytes = html.encode("utf-8")
+    st.download_button("⬇️ HTML-Datei herunterladen", html_bytes, file_name="lebenslauf.html", mime="text/html")
